@@ -1,10 +1,5 @@
 ## example input
-const testinput="""forward 5
-down 5
-forward 8
-up 3
-down 8
-forward 2"""
+const testinput=""""""""
 
 import std/[strutils] #parseEnum,parseInt
 import zero_functional
@@ -25,5 +20,23 @@ proc q1(filename:string):int =
             y += val        
     return x * y
 
+proc q2(filename:string):int =
+    var x,y,aim:int
+    proc pars(x:seq[string]):auto = (x[0].parseEnum[:Dir],x[1].parseInt)
+    for (dir,val) in (filename.lines --> map(split(it,' ')) --> map(it.pars)):
+        case dir
+        of forward:
+            x += val
+            y += aim * val
+        of up:
+            aim -= val
+        of down:
+            aim += val       
+    return x * y
+
+
+
 when isMainModule:
     echo q1("input")
+    assert q2("test") == 900 
+    echo q2("input")

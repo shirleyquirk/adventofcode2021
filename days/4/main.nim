@@ -72,7 +72,7 @@ proc winsWith(grid:BingoSets,balls:set[range[0..99]]):bool =
         if s <= balls:
             return true
     return false               
-
+       
 proc game(input:(seq[int],seq[BingoSets])):auto =
     var balls:set[range[0..99]]
     for bingoball in input[0]:
@@ -84,6 +84,21 @@ proc game(input:(seq[int],seq[BingoSets])):auto =
         if winners.len > 0:
             return (balls,bingoball,winners)
 
+iterator reversed[T](x:openArray[T]):T = 
+    for i in countdown(len(x)-1,0):
+        yield x[i]
+proc trustMe(x:seq[int]):seq[range[0..99]] = cast[seq[range[0..99]]](x)
+
+proc antigame(bingoballs:seq[range[0..99]],sets:seq[BingoSets]):auto =
+    var balls:set[range[0..99]] = bingoballs.toSet
+    for bingoball in bingoballs.reversed:
+        balls.excl bingoball
+        var losers:seq[BingoSets] = @[]
+        for grid in sets:
+            if not grid.winsWith balls:
+                losers.add grid
+        if losers.len > 0:
+            return (balls,bingoball,losers)
 proc q1(filename:string):int =
     let (bingoballs,grids) = filename.parseInput
     let sets = grids.map(toBingoSets)
@@ -97,6 +112,23 @@ proc q1(filename:string):int =
 
 echo q1("test")
 echo q1("input")
+
+#part two
+proc q2(filename:string):int =
+    ## which board will win last?
+    let (bingoballs,grids) = filename.parseInput
+    let sets = grids.map(toBingoSets)
+    let (balls,lastball,losers) = antigame(bingoballs.trustMe,sets)
+    assert len(losers)== 1
+    var loser = losers[0]
+    #when loser wins, what will it be?
+    for x in loser.sets.foldl(a+b) - balls - {lastball}:
+        result += x
+    result *= lastball
+
+assert q2("test") == 1924
+echo q2("input")
+
 ##is it true that there will always be a unique winner?
 
 #surely this is super slow

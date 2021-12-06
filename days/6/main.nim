@@ -1,67 +1,48 @@
 import std/[sequtils,strutils,lists]
-type
-    LanternFish = object
-        gestationTime: int
-proc parseInput(filename:string):seq[LanternFish] = filename.open(fmRead).readLine.split(',').mapIt(LanternFish(gestationTime: it.parseInt))
-#lanternfish produce a new lanternfish every 7 days
-proc tick(fish:var seq[LanternFish]) =
-    var newfishes=0
-    for f in fish.mitems:
-        dec f.gestationTime
-        if f.gestationTime < 0:
-            f.gestationTime = 6
-            inc newfishes
-    fish.add newSeqWith(newfishes,LanternFish(gestationTime:8))
+import zero_functional
 
+type 
+    LanternFish = SinglyLinkedRing[int]
+    ## LanternFish is a histogram of fish population
+    ## grouped into buckets according to how many days are left
+    ## in their gestational period
+    
+proc rotate[T](fish:var SinglyLinkedRing[T]) =
+    fish.head = fish.head.next
+    fish.tail = fish.tail.next
 
-proc q1(filename:string):int =
-    var fish = filename.parseInput
-    for i in 0..79:
-        fish.tick()
-    return fish.len
-assert q1("test") == 5934
-echo q1("input")#this is surely gonna explode stupidly...nope 393019.
+template sixth(fish:LanternFish):SinglyLinkedNode[int] = fish.head.next.next.next.next.next.next
 
-type
-    LanternPop = SinglyLinkedRing[uint64]
-template sixth(l:LanternPop):SinglyLinkedNode[uint64] = l.head.next.next.next.next.next.next
+proc parseInput(filename:string):LanternFish = 
+    var pop:array[9,int]
+    for gestationTime in filename.open(fmRead).readLine.split(',').map(parseInt):
+        inc pop[gestationTime]
+    for fish in pop:
+        result.add fish
 
-proc rotate(l:var LanternPop) =
-    l.head = l.head.next
-    l.tail = l.tail.next
-proc tick(fish:var LanternPop) =
-    #shuffle them all down one
-    #one time a linked list makes sense
-    #actually a ring. but backwards
-    # so head == 8th, head.next == 7th
-    # and tail
-    #tail.............head
-    #0 1 2 3 4 5 6 7 8 =>
-    #8 0 1 2 3 4 5 6 7
-    #add 8 to 6
+proc tick(fish: var LanternFish) =
+    ## the fish population at n days left -> the fish population at n-1 days
+    ## fish population at 0 days becomes the new fish (8 days)
     fish.rotate()
+    ## those new fish (now at fish.tail) get added to the 6th day
+    ## to represent the parents resetting their gestational clock 
+    ## and combining with the bucket that came from 7days to 6
     fish.sixth.value += fish.tail.value
 
-proc initLanternPop(x:seq[LanternFish]):LanternPop =
-    var pop: array[9,int]
-    
-    for s in x:
-        inc pop[s.gestationTime]
-    for s in pop:
-        result.add(s.uint)
-    
-proc population(x:LanternPop):uint64 =
-    for p in x:
-        result += p    
+func population(fish:LanternFish):int = fish --> fold(0,a + it)
 
-proc q2(filename:string):uint64= 
-    ## here we go. this is where it splodes
-    ## what if it's 256? ok, now we don't want an int for each, we want 7 ints for all the fish at eeach gestation day
-    ## doubles every 8 days so 2**(256/8) ish. that's about 2^32 ok so just use a uint.
-    var fish = filename.parseInput.initLanternPop
-    for _ in 0..255:
+func popAfterNdays(fish:LanternFish,n:int):int =
+    var fish = fish
+    for _ in 1..n:
         fish.tick()
-        #echo fish
     return fish.population
-assert q2("test") == 26984457539.uint64
+
+proc q1(filename:string):int = filename.parseInput.popAfterNdays(80)
+
+assert q1("test") == 5934
+echo q1("input")
+
+proc q2(filename:string):int = filename.parseInput.popAfterNdays(256)
+
+assert q2("test") == 26984457539
 echo q2("input")

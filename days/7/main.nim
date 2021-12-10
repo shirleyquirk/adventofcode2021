@@ -24,7 +24,9 @@ echo distance(input,333)
 proc distance2(s:seq[int],n:int):int = 
     for i in s:
         result.inc (abs(i-n)*(abs(i-n)+1) div 2)
-
+#x*(x+1) = x^2 + x
+#(i-n)^2 + abs(i-n) div 2
+#minimize sum of that.
 var max = int.low
 var min = int.high
 for i in input:
@@ -42,3 +44,6 @@ for n in 0..1935:
         mindist = d
         min_n = n
         echo "mindist:",d,"min_n",n
+echo sum(input)
+#because if you increase them all by one
+#
